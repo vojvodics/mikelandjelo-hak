@@ -1,5 +1,8 @@
 import requests
+import os
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+load_dotenv()
 
 import firebase_admin
 from firebase_admin import credentials
@@ -8,6 +11,11 @@ from datetime import datetime
 import ssl
 
 import threading
+
+EMAIL = os.getenv('EMAIL')
+EMAIL_PWD = os.getenv('EMAIL_PWD')
+EMAIL_SERVER = 'smtp.gmail.com'
+EMAIL_PORT = 587
 
 def set_interval(func, sec):
     def func_wrapper():
@@ -43,17 +51,17 @@ def send_mail(email, topics):
     # me == the sender's email address
     # you == the recipient's email address
     msg['Subject'] = 'Stigla je nova vest'
-    msg['From'] = 'novitest123321@gmail.com'
+    msg['From'] = EMAIL
     msg['To'] = email
 
     print('Sending email to ' + email)
     # Send the message via our own SMTP server.
     try:
-        server = smtplib.SMTP("smtp.gmail.com",587)
+        server = smtplib.SMTP(EMAIL_SERVER, EMAIL_PORT)
         server.ehlo() # Can be omitted
         server.starttls(context=context) # Secure the connection
         server.ehlo() # Can be omitted
-        server.login("novitest123321@gmail.com", "kZf2V633wTZw")
+        server.login(EMAIL, EMAIL_PWD)
         server.send_message(msg)
     except Exception as e:
         # Print any error messages to stdout
@@ -72,7 +80,7 @@ def main():
         urls.append(url)
         topic_dict[url] = topic.to_dict()
         topic_dict[url]['id'] = topic.id
-        # print(u'{} => {}'.format(topic.id, topic.to_dict()))
+
     for url in urls:
         topic = topic_dict[url]
         selector = topic['selector']
@@ -80,17 +88,13 @@ def main():
         soup = BeautifulSoup(result.content, features="html.parser")
         titles = soup.find_all(selector['element'], class_=selector['class'])
         news = map(lambda x: str(x.text), titles)
-        # all_a = soup.find_all('a')
-        # news = filter(filter_news, all_a)
+
         topic.setdefault('news', [])
         old_news = topic['news']
         old_news_str = map(lambda x: x['title'], old_news)
         set_difference = set(news) - set(old_news_str)
         difference = list(map(lambda x: {'title': str(x), 'date': str(datetime.now())}, list(set_difference)))
-        # print(difference)
-        # print(set_difference)
-        # print(old_news_str)
-        # print(news)
+
         if len(difference) > 0:
             doc_ref = db.collection(TOPIC_COLLECTION).document(topic['id'])
             doc_ref.update({'news': topic['news'] + difference})
