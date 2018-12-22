@@ -45,7 +45,7 @@ from email.message import EmailMessage
 def send_mail(email, topics):
     # Create a text/plain message
     msg = EmailMessage()
-    msg.set_content('Stigla je nova vest' + str(topics))
+    msg.set_content('\n'.join(list(map(lambda x: x['title'], topics))))
     context = ssl.create_default_context()
 
     # me == the sender's email address
