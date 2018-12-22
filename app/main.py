@@ -7,6 +7,16 @@ from firebase_admin import firestore
 from datetime import datetime
 import ssl
 
+import threading
+
+def set_interval(func, sec):
+    def func_wrapper():
+        set_interval(func, sec)
+        func()
+    t = threading.Timer(sec, func_wrapper)
+    t.start()
+    return t
+
 # Use a service account
 cred = credentials.Certificate('./serviceAccountKey.json')
 firebase_admin.initialize_app(cred)
@@ -53,6 +63,7 @@ def send_mail(email, topics):
         server.quit() 
 
 def main():
+    print('Checking for updates...')
     topics = db.collection(TOPIC_COLLECTION)
     urls = []
     topic_dict = {}
@@ -92,4 +103,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    set_interval(main, 3)
